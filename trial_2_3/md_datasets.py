@@ -4,11 +4,13 @@ import numpy as np
 
 import torch
 from torch.utils.data import Dataset
-from torch_geometric.data import Batch, Data
+from torch_geometric.data import Batch
 
 from joblib import Parallel, delayed
 
 from gnn_utils import one_of_k_encoding_unk_indices, atom_mapping, read_idx, build_frame_graph
+
+###################### For Dynamic Model ######################
 
 # Prepare the MD Dataset
 class MDTrajDataset(Dataset):
@@ -25,7 +27,6 @@ class MDTrajDataset(Dataset):
         self.processed_dir = processed_dir
         self.datatype_ids = datatype_ids
         self.mdh5_file = mdh5_file
-        self.md_H5File = h5py.File(mdh5_file, 'r')  # Keep the file open for the lifetime of the dataset
     
     def process(self):
         for idx in range(self.__len__()):
@@ -51,15 +52,14 @@ class MDTrajDataset(Dataset):
             data_dict = {
                 "edge_index": batched_graph.edge_index.to(torch.int32),
                 "edge_attr": batched_graph.edge_attr,
-                #"batch": batched_graph.batch.to(torch.int32),
-                #"ptr": batched_graph.ptr.to(torch.int32)
+                "batch": batched_graph.batch.to(torch.int32),
+                "ptr": batched_graph.ptr.to(torch.int32)
                 }
             torch.save(data_dict, os.path.join(self.processed_dir, f'{protein_key}.pt'))
             print(f"Saved {protein_key}.pt protein in {self.processed_dir} folder")
 
     def __getitem__(self, idx):
 
-        '''
         with h5py.File(self.mdh5_file, 'r') as md_H5File:
             protein_key = self.datatype_ids[idx]
 
@@ -76,31 +76,8 @@ class MDTrajDataset(Dataset):
 
             feature_atoms_adaptability = md_H5File[protein_key]['feature_atoms_adaptability'][()]
             protein_atoms_adaptability = feature_atoms_adaptability[:ligand_start] # (N, 1)
-            
+
             n_atom = protein_atoms_element.shape[0]
-        '''
-
-
-        protein_key = self.datatype_ids[idx]
-
-        molecules_begin_atom_index = self.md_H5File[protein_key]['molecules_begin_atom_index'][()]
-        molecules_begin_atom_index = molecules_begin_atom_index.astype(int)
-        ligand_start = molecules_begin_atom_index[-1]
-
-        atoms_element = self.md_H5File[protein_key]['atoms_element'][()]
-        protein_atoms_element = atoms_element[:ligand_start]
-        protein_atom_feats = np.array([one_of_k_encoding_unk_indices(elem, atom_mapping) for elem in protein_atoms_element]) # (N, F)
-
-        atoms_coords = self.md_H5File[protein_key]['trajectory_coordinates'][()]
-        protein_coords = atoms_coords[:, :ligand_start, :] # (T, N, 3)
-
-        feature_atoms_adaptability = self.md_H5File[protein_key]['feature_atoms_adaptability'][()]
-        protein_atoms_adaptability = feature_atoms_adaptability[:ligand_start] # (N, 1)
-        
-        n_atom = protein_atoms_element.shape[0]
-
-
-
 
         data_dict = torch.load(os.path.join(self.processed_dir, f'{protein_key}.pt'))
         batched_graph = Batch()
@@ -110,17 +87,10 @@ class MDTrajDataset(Dataset):
         batched_graph.batch = torch.repeat_interleave(torch.arange(self.T, dtype=torch.int64), n_atom)
         batched_graph.edge_attr = data_dict['edge_attr']
         batched_graph.pos = torch.tensor(protein_coords.reshape(-1, 3), dtype=torch.float32)
-        batched_graph.x = torch.tensor(np.repeat(protein_atom_feats, repeats=100, axis=0), dtype=torch.float32)
+        batched_graph.x = torch.tensor(np.tile(protein_atom_feats, (self.T, 1)), dtype=torch.float32)
 
         target = torch.tensor(protein_atoms_adaptability, dtype=torch.float32) # (N, 1)
-
-        first_graph_x = batched_graph.x[:n_atom, :]
-        first_graph_edge_index = batched_graph.edge_index[:, batched_graph.edge_index[0] < n_atom]
-        first_graph_edge_attr = batched_graph.edge_attr[:first_graph_edge_index.shape[1]]
-        first_graph_pos = batched_graph.pos[:n_atom, :]
-        first_graph = Data(x=first_graph_x, edge_index=first_graph_edge_index, edge_attr=first_graph_edge_attr, pos=first_graph_pos)
-        
-        return first_graph, batched_graph, target
+        return batched_graph, target
 
     def __len__(self):
         return len(self.datatype_ids)
@@ -130,7 +100,7 @@ def create_dataset(data_type, k, distance_threshold, graph_type, folder_path, T)
     # Read the md file containing all the data.
     files_root =  ""
 
-    mdh5_file = "/work/lts2/users/sajal/data/md_out.hdf5"#"/scratch/izar/chaurasi/data/md_out.hdf5" #os.path.join(files_root, 'tiny_md_out.hdf5') #'misato-dataset/data/MD/h5_files/tiny_md_out.hdf5'
+    mdh5_file = "/work/lts2/users/sajal/data/md_out.hdf5"
     #md_H5File = h5py.File(mdh5_file)
 
     # Read the protein ids corresponding to data_type
@@ -143,6 +113,8 @@ def create_dataset(data_type, k, distance_threshold, graph_type, folder_path, T)
     datatype_dataset = MDTrajDataset(k, distance_threshold, graph_type, folder_path, datatype_ids, mdh5_file, T)
 
     return datatype_dataset
+
+###################### For Static Model ######################
 
 class StaticDataset(MDTrajDataset):
     def __init__(self, k, distance_threshold, graph_type, processed_dir, datatype_ids, mdh5_file, T):
@@ -177,7 +149,7 @@ def create_static_model_dataset(data_type, k, distance_threshold, graph_type):
     # Read the md file containing all the data.
     files_root =  ""
 
-    mdh5_file = "/work/lts2/users/sajal/data/md_out.hdf5" #"/scratch/izar/chaurasi/data/md_out.hdf5" #os.path.join(files_root, 'tiny_md_out.hdf5') #'misato-dataset/data/MD/h5_files/tiny_md_out.hdf5'
+    mdh5_file = "/work/lts2/users/sajal/data/md_out.hdf5"
     #md_H5File = h5py.File(mdh5_file)
 
     # Read the protein ids corresponding to data_type

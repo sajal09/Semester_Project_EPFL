@@ -5,6 +5,7 @@ Things to check before running:
 3. datatype_ids_file path
 4. train,val,test splits path
 5. time, script to run
+6. checkpoint path
 '''
 
 import gc
@@ -24,7 +25,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-from models import SpatialModel
+from models import StaticModel
 from gnn_utils import atom_mapping
 from md_datasets import create_static_model_dataset
 
@@ -68,24 +69,6 @@ train_dataset = create_static_model_dataset('train', k, distance_threshold, grap
 train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True, collate_fn=lambda x: x[0], generator=g)
 print("Number of Training Examples: ", len(train_dataloader))
 
-'''
-start = time.time()
-
-train_list = []
-for i in range(train_dataset.__len__()):
-    print(i)
-    train_list.append( train_dataset.__getitem__(i) )
-
-end = time.time()
-
-print(f"Elapsed time: {end - start:.4f} seconds")
-print(len(train_list))
-print(train_list[0][0].x.shape)
-print(train_list[4][0].x.shape)
-print(train_list[10][0].x.shape)
-'''
-
-
 val_dataset = create_static_model_dataset('val', k, distance_threshold, graph_type)
 val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=False, collate_fn=lambda x: x[0])
 print("Number of Validation Examples: ", len(val_dataloader))
@@ -94,17 +77,17 @@ test_dataset = create_static_model_dataset('test', k, distance_threshold, graph_
 test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, collate_fn=lambda x: x[0])
 print("Number of Test Examples: ", len(test_dataloader))
 
-gnn_hidden=64
-gnn_out=64
+gnn_hidden=32
+gnn_out=32
 
-model = SpatialModel(node_feat_dim=len(atom_mapping),#atom_feats_list['train'][0].shape[1],
-                             gnn_hidden=gnn_hidden, 
-                             gnn_out=gnn_out,
-                             out_dim=1
-                             ).to(device)
+model = StaticModel(node_feat_dim=len(atom_mapping),
+                        gnn_hidden=gnn_hidden, 
+                        gnn_out=gnn_out,
+                        out_dim=1
+                        ).to(device)
 print('Number of trainable parameters:', sum(p.numel() for p in model.parameters() if p.requires_grad))
 
-lr = 1e-5
+lr = 1e-4
 start_epoch = 0
 epochs = 100
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -112,11 +95,12 @@ scheduler = CosineAnnealingLR(optimizer, T_max=epochs)
 loss_fn = nn.MSELoss()
 global_step = 0
 best_val_loss = 99999999.0
-resume = True
+resume = False
+checkpoint_folder = '/home/chaurasi/semesterproject/trial_2_3/wandb/CheckpointStaticModel'
 
 if resume:
-    wandb.init(project="semester_project_epfl", id="k7n2fo8j", resume='must')
-    checkpoint = torch.load(os.path.join("/home/chaurasi/semesterproject/trial/wandb/CheckpointStaticModel/model_epoch.pth"))
+    wandb.init(project="semester_project_epfl", id="", resume='must')
+    checkpoint = torch.load(os.path.join(checkpoint_folder, "model_epoch.pth"))
     model.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
@@ -211,7 +195,7 @@ for epoch in tqdm(range(start_epoch, epochs), desc="Training"):
                         'scheduler_state_dict': scheduler.state_dict(),
                         'best_val_loss': best_val_loss,
                         'global_step': global_step
-                }, os.path.join("/home/chaurasi/semesterproject/trial/wandb/CheckpointStaticModel/best_model.pth"))
+                }, os.path.join(checkpoint_folder, "best_model.pth"))
         print(f"✅ New best model saved with val loss: {avg_val_loss:.4f}")
 
     torch.save({    'epoch': epoch,
@@ -220,7 +204,7 @@ for epoch in tqdm(range(start_epoch, epochs), desc="Training"):
                     'scheduler_state_dict': scheduler.state_dict(),
                     'best_val_loss': best_val_loss,
                     'global_step': global_step
-            }, os.path.join("/home/chaurasi/semesterproject/trial/wandb/CheckpointStaticModel/model_epoch.pth"))
+            }, os.path.join(checkpoint_folder, "model_epoch.pth"))
     print(f"✅ Model checkpoint saved at epoch {epoch+1}")
 
 

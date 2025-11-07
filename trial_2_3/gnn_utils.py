@@ -47,18 +47,3 @@ def build_frame_graph(coords, atom_feats, k, distance_threshold, graph_type):
     x = torch.tensor(atom_feats, dtype=torch.float32)
 
     return Data(x=x, edge_index=edge_index, edge_attr=edge_attr, pos=torch.tensor(coords, dtype=torch.float))
-
-def adaptability(h5_entries):
-    """
-    Aligns the trajectories to the ref frame.
-    Args:
-    h5_entries (dict): Dictionary of h5 entries
-    """
-    ref = h5_entries["trajectory_coordinates"][0]
-    NAtom = len(ref)
-    dist_to_ref_mat = np.zeros((NAtom,100))
-    for ind in range(100):
-        aligned = align_frame_to_ref(h5_entries, ind, ref)
-        squared_dist = np.sum((ref-aligned)**2, axis=1)
-        dist_to_ref_mat[:, ind] = np.sqrt(squared_dist)
-    return np.mean(dist_to_ref_mat, axis=1), np.std(dist_to_ref_mat, axis=1), ref 

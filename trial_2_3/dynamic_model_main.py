@@ -5,6 +5,7 @@ Things to check before running:
 3. datatype_ids_file path
 4. train,val,test splits path
 5. time, script to run
+6. checkpoint path
 '''
 
 import gc
@@ -24,7 +25,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-from models import SpatialTemporalModel3
+from models import SpatialTemporalModel
 from gnn_utils import atom_mapping
 from md_datasets import create_dataset
 
@@ -64,7 +65,7 @@ k = 2
 distance_threshold = 4.5
 graph_type = 'threshold'
 T = 100
-folder_path = '/work/lts2/users/sajal/data/full_data/'#'/scratch/izar/chaurasi/data/full_data/'
+folder_path = '/work/lts2/users/sajal/data/full_data/'
 
 train_dataset = create_dataset('train', k, distance_threshold, graph_type, os.path.join(folder_path, 'train_data'), T)
 train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True, collate_fn=lambda x: x[0], generator=g)
@@ -80,20 +81,18 @@ print("Number of Test Examples: ", len(test_dataloader))
 
 gnn_hidden=32
 gnn_out=32
-gru_hidden=128
-num_gru_layers = 1
-gru_dropout = 0.0
-static_gnn_hidden=64
-static_gnn_out=64
+transformer_hidden=128
+num_transformer_layers = 1
+transformer_dropout = 0.0
+num_heads = 4
 
-model = SpatialTemporalModel3(node_feat_dim=len(atom_mapping),#atom_feats_list['train'][0].shape[1],
+model = SpatialTemporalModel(node_feat_dim=len(atom_mapping),
                              gnn_hidden=gnn_hidden, 
                              gnn_out=gnn_out,
-                             gru_hidden=gru_hidden,
-                             num_gru_layers=num_gru_layers,
-                             gru_dropout=gru_dropout,
-                             static_gnn_hidden=static_gnn_hidden,
-                             static_gnn_out=static_gnn_out,
+                             transformer_hidden=transformer_hidden,
+                             num_transformer_layers=num_transformer_layers,
+                             transformer_dropout=transformer_dropout,
+                             num_heads=num_heads,
                              out_dim=1
                              ).to(device)
 print('Number of trainable parameters:', sum(p.numel() for p in model.parameters() if p.requires_grad))
@@ -106,11 +105,12 @@ scheduler = CosineAnnealingLR(optimizer, T_max=epochs)
 loss_fn = nn.MSELoss()
 global_step = 0
 best_val_loss = 99999999.0
-resume = True
+resume = False
+checkpoint_folder = '/home/chaurasi/semesterproject/trial_2_3/wandb/CheckpointDynamicModel'
 
 if resume:
-    wandb.init(project="semester_project_epfl", id="32wpeock", resume='must')
-    checkpoint = torch.load(os.path.join("/home/chaurasi/semesterproject/trial/wandb/CheckpointDynamicModel/model_epoch.pth"))
+    wandb.init(project="semester_project_epfl", id="", resume='must')
+    checkpoint = torch.load(os.path.join(checkpoint_folder, "model_epoch.pth"))
     model.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
@@ -123,15 +123,14 @@ else:
     wandb.init(project="semester_project_epfl", config={
         "gnn_hidden": gnn_hidden,
         "gnn_out": gnn_out,
-        "gru_hidden": gru_hidden,
-        "num_gru_layers": num_gru_layers,
-        "gru_dropout": gru_dropout,
+        "transformer_hidden": transformer_hidden,
+        "num_transformer_layers": num_transformer_layers,
+        "transformer_dropout": transformer_dropout,
+        "num_heads": num_heads,
         "lr": lr,
         "epochs": epochs,
         "seed": seed,
-        "batch_size": 1,
-        "static_gnn_hidden": static_gnn_hidden,
-        "static_gnn_out": static_gnn_out
+        "batch_size": 1
     })
 
 start = time.time()
@@ -142,7 +141,7 @@ for epoch in tqdm(range(start_epoch, epochs), desc="Training"):
     model.train()
     total_loss = 0.0
     
-    for first_graph, batched_graph, target in train_dataloader:
+    for batched_graph, target in train_dataloader:
 
         if (batched_graph.x.shape[0]/100) > graph_node_limit:
             print(f"Skipping graph with {batched_graph.x.shape[0]} nodes")
@@ -154,9 +153,8 @@ for epoch in tqdm(range(start_epoch, epochs), desc="Training"):
 
         batched_graph = batched_graph.to(device)
         target = target.unsqueeze(-1).to(device) # (N, 1)
-        first_graph = first_graph.to(device)
 
-        pred = model(first_graph, batched_graph)     # (N, 1)
+        pred = model(batched_graph)     # (N, 1)
         loss = loss_fn(pred, target)
 
         optimizer.zero_grad()
@@ -180,16 +178,15 @@ for epoch in tqdm(range(start_epoch, epochs), desc="Training"):
     val_count = 0
     
     with torch.no_grad():
-        for first_graph, batched_graph, target in val_dataloader:
+        for batched_graph, target in val_dataloader:
 
             if (batched_graph.x.shape[0]/100) > graph_node_limit:
                 continue
 
             batched_graph = batched_graph.to(device)
             target = target.unsqueeze(-1).to(device) # (N, 1)
-            first_graph = first_graph.to(device)
 
-            pred = model(first_graph, batched_graph)    # (N, 1)
+            pred = model(batched_graph)     # (N, 1)
             loss = loss_fn(pred, target)
             total_val_loss += loss.item()
             val_count += 1
@@ -216,7 +213,7 @@ for epoch in tqdm(range(start_epoch, epochs), desc="Training"):
                         'scheduler_state_dict': scheduler.state_dict(),
                         'best_val_loss': best_val_loss,
                         'global_step': global_step
-                }, os.path.join("/home/chaurasi/semesterproject/trial/wandb/CheckpointDynamicModel/best_model.pth"))
+                }, os.path.join(checkpoint_folder, "best_model.pth"))
         print(f"✅ New best model saved with val loss: {avg_val_loss:.4f}")
 
     torch.save({    'epoch': epoch,
@@ -225,7 +222,7 @@ for epoch in tqdm(range(start_epoch, epochs), desc="Training"):
                     'scheduler_state_dict': scheduler.state_dict(),
                     'best_val_loss': best_val_loss,
                     'global_step': global_step
-            }, os.path.join("/home/chaurasi/semesterproject/trial/wandb/CheckpointDynamicModel/model_epoch.pth"))
+            }, os.path.join(checkpoint_folder, "model_epoch.pth"))
     print(f"✅ Model checkpoint saved at epoch {epoch+1}")
 
 
