@@ -25,7 +25,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-from models import SpatialTemporalModel
+from models import DynamicModelTransformers
 from gnn_utils import atom_mapping
 from md_datasets import create_dataset
 
@@ -86,7 +86,7 @@ num_transformer_layers = 1
 transformer_dropout = 0.0
 num_heads = 4
 
-model = SpatialTemporalModel(node_feat_dim=len(atom_mapping),
+model = DynamicModelTransformers(node_feat_dim=len(atom_mapping),
                              gnn_hidden=gnn_hidden, 
                              gnn_out=gnn_out,
                              transformer_hidden=transformer_hidden,

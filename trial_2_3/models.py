@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, GraphNorm
@@ -95,8 +96,10 @@ class DynamicModelTransformers(nn.Module):
         self.readout = nn.Linear(gnn_out, out_dim)
 
     def forward(self, graphs):
-        # 1) Run GNN on each frame
-        H_stack = self.spatial_gnn(graphs).reshape((-1, len(graphs), self.gnn_out))
+        # 1) Run GNN on each frame (N*T, out_dim) -> (N, T, out_dim)
+        H_stack = self.spatial_gnn(graphs)
+        H_stack = H_stack.reshape((len(graphs), -1, self.gnn_out))
+        H_stack = torch.swapaxes(H_stack, 0, 1)
 
         # 2) Temporal Transformer per atom
         Z = self.transformer(H_stack)          # (N, T, gnn_out)
@@ -132,7 +135,9 @@ class DynamicModelLSTM(nn.Module):
 
     def forward(self, graphs):
         # 1) Run GNN on each frame
-        H_stack = self.spatial_gnn(graphs).reshape((-1, len(graphs), self.gnn_out))
+        H_stack = self.spatial_gnn(graphs)
+        H_stack = H_stack.reshape((len(graphs), -1, self.gnn_out))
+        H_stack = torch.swapaxes(H_stack, 0, 1)
 
         # 2) Temporal LSTM per atom
         Z, _ = self.lstm(H_stack)          # (N, T, lstm_hidden)
@@ -169,7 +174,9 @@ class DynamicModelGRU(nn.Module):
 
     def forward(self, graphs):
         # 1) Run GNN on each frame
-        H_stack = self.spatial_gnn(graphs).reshape((-1, len(graphs), self.gnn_out))
+        H_stack = self.spatial_gnn(graphs)
+        H_stack = H_stack.reshape((len(graphs), -1, self.gnn_out))
+        H_stack = torch.swapaxes(H_stack, 0, 1)
 
         # 2) Temporal GRU per atom
         Z, _ = self.gru(H_stack)          # (N, T, gru_hidden)
@@ -219,7 +226,9 @@ class StaticDynamicModelGRU(nn.Module):
 
     def forward(self, first_graph, graphs):
         # 1) Run GNN on each frame
-        H_stack = self.spatial_gnn(graphs).reshape((-1, len(graphs), self.gnn_out))
+        H_stack = self.spatial_gnn(graphs)
+        H_stack = H_stack.reshape((len(graphs), -1, self.gnn_out))
+        H_stack = torch.swapaxes(H_stack, 0, 1)
 
         # 2) Temporal GRU per atom
         Z, _ = self.gru(H_stack)          # (N, T, gru_hidden)
