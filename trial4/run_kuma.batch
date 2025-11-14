@@ -1,0 +1,24 @@
+#!/bin/bash
+
+#SBATCH --nodes=1
+#SBATCH --qos=normal
+#SBATCH --ntasks-per-node=1
+#SBATCH --gres=gpu:1
+#SBATCH --partition=l40s
+#SBATCH --time=12:00:00
+#SBATCH --output=./logs.txt
+#SBATCH --account=lts2
+#SBATCH --no-requeue
+
+source /home/chaurasi/semesterproject/venvs/venv-graph1/bin/activate
+
+# Debugging: Check Python and PyTorch
+echo "Python binary: $(which python)"
+echo "Python version: $(python --version)"
+
+# Run the script
+#srun python3 md_out.py
+srun python3 dynamic_model_main.py
+#srun python3 save_data.py
+#srun python3 exp.py 
+#srun python3 static_model_main.py
