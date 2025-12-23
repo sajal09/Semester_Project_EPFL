@@ -1,6 +1,6 @@
 ## Follow the steps below:
 
-### Install other packages and Pytraj in your venv
+### Install other packages and Pytraj (https://amber-md.github.io/pytraj/latest/installation.html) in your venv 
 ```
 bash install.sh
 ```
