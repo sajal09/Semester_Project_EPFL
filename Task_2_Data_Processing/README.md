@@ -1,5 +1,16 @@
 ### Follow the steps below:
 
+#### Download the `MD.hdf5` from Zenodo:
+```
+wget -O MD.hdf5 https://zenodo.org/record/7711953/files/MD.hdf5
+```
+
+#### Then, create the `md_out.hdf5` file using the script:
+```
+python3 md_out.py
+```
+**Note**: The misato-dataset/src/data/processing/preprocessing_db.py is modified such that it stores the Aligned Trajectory Coordinates instead of Unaligned Trajectory Coordinates.
+
 #### Install other packages and Pytraj (https://amber-md.github.io/pytraj/latest/installation.html) in your venv 
 ```
 bash install.sh
