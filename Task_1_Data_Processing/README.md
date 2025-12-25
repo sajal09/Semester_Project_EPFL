@@ -21,3 +21,27 @@ Change data_type to 'train' in save_data.py and run:
 python3 save_data.py
 ```
 
+#### For Node Featurization,
+* **For relative_distance_feature**: First get the mean and standard deviation and then create the feature:
+```
+python3
+
+from gnn_utils import *
+
+mean_imputation, actual_mean, actual_std = get_imputationmean_actualmean_actualstd_of_locantdistance_feature()
+
+relative_distance_feature(mean_imputation, actual_mean, actual_std)
+```
+
+* **For nodedegree_feature**: First get the mean and standard deviation and then create the feature:
+```
+python3
+
+from gnn_utils import *
+
+mean, std = get_actualmean_actualstd_of_nodedegree_feature()
+
+create_nodedegree_feature(mean, std, actual_std, 'train')
+
+create_nodedegree_feature(mean, std, actual_std, 'val')
+```
