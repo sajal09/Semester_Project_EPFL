@@ -31,16 +31,24 @@ from h5_to_traj import create_traj_files
 create_traj_files()
 ```
 
-### Then add 'atoms_residue_number' field in md_out file using add_atom_residue_number.py
+#### Then add 'atoms_residue_number' field in md_out file using add_atom_residue_number.py
 ```
 python3 add_atom_residue_number.py
 ```
 
-### Then add ('residue_ids', 'residue_binding_labels') fields in md_out file using add_binding_site_labels.py
+#### Then add ('residue_ids', 'residue_binding_labels') fields in md_out file using add_binding_site_labels.py
 ```
 python3 add_binding_site_labels.py
 ```
 
-
+#### Now generate the graphs and save them in disk:
+Change data_type to 'val' in `save_data.py` and run:
+```
+python3 save_data.py
+```
+Change data_type to 'train' in `save_data.py` and run:
+```
+python3 save_data.py
+```
 
 
