@@ -53,11 +53,15 @@ python3 add_binding_site_labels.py
 ```
 
 #### Now generate the graphs and save them in disk:
+Change data_type to 'train' in `save_data.py` and run:
+```
+python3 save_data.py
+```
 Change data_type to 'val' in `save_data.py` and run:
 ```
 python3 save_data.py
 ```
-Change data_type to 'train' in `save_data.py` and run:
+Change data_type to 'test' in `save_data.py` and run:
 ```
 python3 save_data.py
 ```
