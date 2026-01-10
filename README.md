@@ -8,7 +8,7 @@ First create a conda environment with python 3.11.12.
 bash install.sh
 ```
 
-## To run a model, go into the folder of that model and run:
+## To reproduce the results of a model, go into the folder of that model and run:
 
 ```
 python3 dynamic_model_main.py
@@ -109,4 +109,7 @@ python3 dynamic_model_main.py
         ├── gnn_utils.py
         └── md_datasets.py
 ```
+
+## Distribution of protein atom counts in the MISATO dataset
+
 <img src="imgs/Protein_Atom_Counts_Histogram.png" alt="drawing" style="width:500px;"/>
