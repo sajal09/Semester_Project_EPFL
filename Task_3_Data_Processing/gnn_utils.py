@@ -4,11 +4,6 @@ from scipy.spatial.distance import cdist
 from sklearn.neighbors import NearestNeighbors
 from torch_geometric.data import Data
 
-def read_idx(file_name):
-    with open(file_name, 'r') as f: 
-        ids = f.read().splitlines()
-    return ids
-
 def build_frame_graph(coords, atom_feats, k, distance_threshold, graph_type):
     if graph_type == 'knn':
         N = coords.shape[0]
