@@ -37,10 +37,12 @@ python3 save_data.py
 
 ### Further Notes
 
-##### Train and Val Ids
-Please refer to file `train_val_ids.py`
+##### Train, Val, Test Ids
+Please refer to file `train_val_test_ids.py`
 
-##### Test Ids
+---
+
+##### Official Test Ids
 You can download the test data corresponding to core set (casp 2016) from here:
 ```
 https://www.pdbbind-plus.org.cn/casf
