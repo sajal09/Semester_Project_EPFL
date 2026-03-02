@@ -11,10 +11,11 @@ python3 md_out.py
 ```
 **Note**: The misato-dataset/src/data/processing/preprocessing_db.py is modified such that it stores the Aligned Trajectory Coordinates instead of Unaligned Trajectory Coordinates.
 
----
 
-#### Point the correct parent folder path in md_datasets.py for these files:
-refined_remove_core_filtered_train_with_binding_site.pickle, refined_remove_core_filtered_val_with_binding_site.pickle, core_filtered_with_binding_site.pickle files contain the train, val, test split pdb ids respectively.
+#### Download the `QM.hdf5` from Zenodo:
+```
+wget -O QM.hdf5 https://zenodo.org/records/7711953/files/QM.hdf5
+```
 
 ---
 
@@ -32,4 +33,31 @@ Change data_type to 'test' in `save_data.py` and run:
 python3 save_data.py
 ```
 
+---
+
+### Further Notes
+
+##### Train and Val Ids
+Please refer to file `train_val_ids.py`
+
+##### Test Ids
+You can download the test data corresponding to core set (casp 2016) from here:
+```
+https://www.pdbbind-plus.org.cn/casf
+```
+You have to download the "The CASF-2016 benchmark package" and inside it, you will find the "coreset" folder which has the test set PDB ids (total 285).
+Then, we only take the Ids which are present in Misato as well.
+
+---
+
+##### Origin of all_dataset_merged.csv
+The origin of all_dataset_merged.csv is still unknown. I got it from Pengkang from his work/lts2/ directory in the Kuma cluster.
+
+---
+
+##### Origin of atom_classes.pickle
+You can get atom_classes.pickle from the Misato-Affinity github repo:
+```
+https://github.com/kierandidi/misato-affinity/blob/main/data/atom_classes.pickle
+```
 
