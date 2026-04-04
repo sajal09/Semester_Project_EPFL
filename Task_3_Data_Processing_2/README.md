@@ -53,7 +53,11 @@ Then, we only take the Ids which are present in Misato as well.
 ---
 
 ##### Origin of all_dataset_merged.csv
-The origin of all_dataset_merged.csv is still unknown. I got it from Pengkang from his work/lts2/ directory in the Kuma cluster.
+The all_dataset_merged.csv comes from the link below where you have to download "Index files":
+```
+https://www.pdbbind-plus.org.cn/download -> PDBbind v2020.R1 -> Index files
+```
+Inside it, you will find the Ki/Kd values of various PDB ids. You can then take -log(Ki) or -log(Kd) (take log after converting it to Molars) to get the Target Binding Affinity.
 
 ---
 
