@@ -20,3 +20,4 @@ For checking, you can use the train_go_labels.csv and check some GO labels and t
 python ia_weights.py
 ```
 -------------
+#### CAFA 5 Evaluation Metric: https://www.kaggle.com/competitions/cafa-5-protein-function-prediction/discussion/405237
